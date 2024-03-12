@@ -10,6 +10,7 @@ import json
 from database import get_db
 from sqlalchemy.orm import Session
 from domain.tickers import tickers_crud
+from domain.incomestatements import incomestatements_crud, incomestatement_schema
 from models import Tickers
 
 app = FastAPI()
@@ -49,3 +50,18 @@ def get_data(ticker: str, db: Session = Depends(get_db)):
     print("===================================")
     print(ticker_yf.quarterly_cashflow)
     return ticker_yf.quarterly_income_stmt
+
+@app.get("/income/{ticker}")
+def get_income(ticker: str, db: Session = Depends(get_db)):
+    yf.pdr_override()
+    ticker_yf = yf.Ticker(ticker)
+
+    raw = json.loads(ticker_yf.quarterly_income_stmt.to_json())
+    keys = list(raw.keys())
+
+    for key in keys:
+        quarterly_income_stmt = raw.get(key)
+        incomestatements_crud.create_incomestatements(db, ticker=ticker, timestamp=key,
+                                                      _income_statement=quarterly_income_stmt)
+
+    return json.loads(ticker_yf.quarterly_income_stmt.to_json())
