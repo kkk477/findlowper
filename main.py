@@ -10,7 +10,9 @@ import json
 from database import get_db
 from sqlalchemy.orm import Session
 from domain.tickers import tickers_crud
-from domain.incomestatements import incomestatements_crud, incomestatement_schema
+from domain.incomestatements import incomestatements_crud
+from domain.balancesheets import balancesheets_crud
+from domain.cashflows import cashflows_crud
 from models import Tickers
 
 app = FastAPI()
@@ -65,3 +67,32 @@ def get_income(ticker: str, db: Session = Depends(get_db)):
                                                       _income_statement=quarterly_income_stmt)
 
     return json.loads(ticker_yf.quarterly_income_stmt.to_json())
+
+@app.get("/balance/{ticker}")
+def get_balance(ticker: str, db: Session = Depends(get_db)):
+    yf.pdr_override()
+    ticker_yf = yf.Ticker(ticker)
+
+    raw = json.loads(ticker_yf.quarterly_balance_sheet.to_json())
+    keys = list(raw.keys())
+
+    for key in keys:
+        quarterly_balance_sheet = raw.get(key)
+        balancesheets_crud.create_balance_sheets(db, ticker=ticker, timestamp=key,
+                                                 _balance_sheet=quarterly_balance_sheet)
+
+    return json.loads(ticker_yf.quarterly_balance_sheet.to_json())
+
+@app.get("/cashflow/{ticker}")
+def get_cashflow(ticker: str, db: Session = Depends(get_db)):
+    yf.pdr_override()
+    ticker_yf = yf.Ticker(ticker)
+
+    raw = json.loads(ticker_yf.quarterly_cashflow.to_json())
+    keys = list(raw.keys())
+
+    for key in keys:
+        quarterly_cashflow = raw.get(key)
+        cashflows_crud.create_cashflow(db, ticker=ticker, timestamp=key, _cashflow=quarterly_cashflow)
+
+    return json.loads(ticker_yf.quarterly_cashflow.to_json())
