@@ -62,3 +62,10 @@ def create_cashflow(db: Session, ticker: str, timestamp: str, _cashflow: dict):
 
     db.add(db_cashflow)
     db.commit()
+
+def get_cashflow(db: Session, ticker: str):
+    return db.query(Cashflows).order_by(Cashflows.modified_at.desc()).filter(Cashflows.ticker == ticker).all()
+
+def is_cashflow(db: Session, ticker: str, timestamp: str):
+    return db.query(Cashflows).filter(ticker == Cashflows.ticker , Cashflows.modified_at == datetime.fromtimestamp(int(
+        timestamp) / 1000)).first()

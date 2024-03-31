@@ -62,3 +62,7 @@ def create_incomestatements(db: Session, ticker: str, timestamp: str, _income_st
 
 def get_incomestatements(db: Session, ticker: str):
     return db.query(IncomeStatements).filter(IncomeStatements.ticker == ticker).first()
+
+def is_incomestatements(db: Session, ticker: str, timestamp: str):
+    return db.query(IncomeStatements).filter(ticker == IncomeStatements.ticker, IncomeStatements.modified_at == datetime.fromtimestamp(int(
+        timestamp) / 1000)).first()

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -78,10 +78,10 @@ class BalanceSheets(Base):
     treasury_shares_number = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     ordinary_shares_number = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     share_issued = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
-    total_debt = Column(Numeric(precision=30, scale=10), default=0, nullable=False),
+    total_debt = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     tangible_book_value = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     invested_capital = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
-    working_capital = Column(Numeric(precision=30, scale=10), default=0, nullable=False),
+    working_capital = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     net_tangible_assets = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     capital_lease_obligations = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     common_stock_equity = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
@@ -203,3 +203,44 @@ class Cashflows(Base):
     net_income_from_continuing_operations = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
 
     modified_at = Column(DateTime, nullable=True)
+
+class Rawstatistics(Base):
+    __tablename__ = 'rawstatistics'
+
+    id = Column(Integer, primary_key=True)
+    ticker = Column(String(10), unique=False, nullable=False)
+    modified_at = Column(Date, nullable=True)
+
+    per = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    forward_per = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    pbr = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    roe = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    current_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    quick_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+
+class Refinedstatistics(Base):
+    __tablename__ = 'refinedstatistics'
+
+    id = Column(Integer, primary_key=True)
+    ticker = Column(String(10), unique=False, nullable=False)
+    modified_at = Column(Date, nullable=True)
+
+    refined_per = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    refined_forward_per = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    refined_pbr = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    refined_roe = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+
+class Recommandationtickers(Base):
+    __tablename__ = 'recommandationtickers'
+
+    id = Column(Integer, primary_key=True)
+    ticker = Column(String(10), unique=False, nullable=False)
+    modified_at = Column(Date, nullable=True)
+
+    recommandation_per = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    recommandation_forward_per = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    recommandation_pbr = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    recommandation_roe = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+
+    current_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    quick_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)

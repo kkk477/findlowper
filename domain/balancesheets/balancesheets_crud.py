@@ -75,3 +75,10 @@ def create_balance_sheets(db: Session, ticker: str, timestamp: str, _balance_she
 
     db.add(db_balance_sheet)
     db.commit()
+
+def get_balance_sheets(db: Session, ticker: str):
+    return db.query(BalanceSheets).filter(BalanceSheets.ticker == ticker).first()
+
+def is_balance_sheets(db: Session, ticker: str, timestamp: str):
+    return db.query(BalanceSheets).filter(ticker == BalanceSheets.ticker, BalanceSheets.modified_at == datetime.fromtimestamp(int(
+        timestamp) / 1000)).first()
