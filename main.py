@@ -8,6 +8,7 @@ import yfinance as yf
 import json
 
 from database import get_db
+from datetime import datetime
 from starlette import status
 from sqlalchemy.orm import Session
 from domain.tickers import tickers_crud
@@ -113,7 +114,7 @@ def get_recommendations(db: Session = Depends(get_db)):
         ticker_yf = yf.Ticker(ticker.ticker)
         ticker_yf.history(period='max')
         info = ticker_yf.info
-        per = info.get('currentPrice')/info.get('trailingEps')
+        per = info.get('trailingPE')
         fwd_per = info.get('forwardPE')
         pbr = info.get('priceToBook')
         roe = info.get('returnOnEquity')
@@ -121,22 +122,22 @@ def get_recommendations(db: Session = Depends(get_db)):
         quick_ratio = info.get('quickRatio')
 
         if per == 'Infinity':
-            per = 9999999
+            continue
 
         if fwd_per == 'Infinity':
-            fwd_per = 9999999
+            continue
 
         if pbr == 'Infinity':
-            pbr = 9999999
+            continue
 
         if roe == 'Infinity':
-            roe = -99999
+            continue
 
         if current_ratio == 'Infinity':
-            current_ratio = -99999
+            continue
 
         if quick_ratio == 'Infinity':
-            quick_ratio = -99999
+            continue
 
         if not rawstatistics_crud.is_rawstatistic(db, ticker.ticker):
             rawstatistics_crud.create_rawstatistics(db, ticker.ticker, per, fwd_per, pbr, roe, current_ratio, quick_ratio)
@@ -148,5 +149,52 @@ def get_recommendations(ticker: str, db: Session = Depends(get_db)):
     yf.pdr_override()
     ticker_yf = yf.Ticker(ticker)
     info = ticker_yf.info
-    #per = info.get('currentPrice')/info.get('forwardEps')
+    # trailingEps = info.get('trailingEps')
+    # per = info.get('currentPrice')/trailingEps
     return info
+
+@app.get("/do/refine")
+def do_refine(db: Session = Depends(get_db)):
+    rowdatas = rawstatistics_crud.get_all_rawstatistic(db)
+    rawstatistic_per = rawstatistics_crud.get_rawstatistic_per(db)
+    rawstatistic_fwdper = rawstatistics_crud.get_rawstatistic_fwdper(db)
+    rawstatistic_pbr = rawstatistics_crud.get_rawstatistic_pbr(db)
+    rawstatistic_roe = rawstatistics_crud.get_rawstatistic_roe(db)
+    rawstatistic_current = rawstatistics_crud.get_rawstatistic_current(db)
+    rawstatistic_quick = rawstatistics_crud.get_rawstatistic_quick(db)
+
+    per_mean = pd.Series(rawstatistic_per).mean(axis=0)
+    per_std = pd.Series(rawstatistic_per).std(axis=0)
+    fwdper_mean = pd.Series(rawstatistic_fwdper).mean(axis=0)
+    fwdper_std = pd.Series(rawstatistic_fwdper).std(axis=0)
+
+    pbr_mean = pd.Series(rawstatistic_pbr).mean(axis=0)
+    pbr_std = pd.Series(rawstatistic_pbr).std(axis=0)
+
+    roe_mean = pd.Series(rawstatistic_roe).mean(axis=0)
+    roe_std = pd.Series(rawstatistic_roe).std(axis=0)
+
+    current_mean = pd.Series(rawstatistic_current).mean(axis=0)
+    current_std = pd.Series(rawstatistic_current).std(axis=0)
+
+    quick_mean = pd.Series(rawstatistic_quick).mean(axis=0)
+    quick_std = pd.Series(rawstatistic_quick).std(axis=0)
+
+    for rowdata in rowdatas:
+        normalized_per = (float(rowdata.per) - per_mean)/per_std
+        normalized_fwdper = (float(rowdata.forward_per) - fwdper_mean) / fwdper_std
+        normalized_pbr = (float(rowdata.pbr) - pbr_mean) / pbr_std
+        normalized_roe = (float(rowdata.roe) - roe_mean) / roe_std
+        normalized_current = (float(rowdata.current_ratio) - current_mean) / current_std
+        normalized_quick = (float(rowdata.quick_ratio) - quick_mean) / quick_std
+        refinedstatistics_crud.create_refinedstatistic(db, rowdata.ticker, normalized_per,
+                                                       normalized_fwdper,
+                                                       normalized_pbr, normalized_roe, rowdata.current_ratio, rowdata.quick_ratio)
+
+    return per_mean
+
+@app.get("/do/join")
+def do_join(db: Session = Depends(get_db)):
+    a=len(refinedstatistics_crud.find_recommendations(db))
+    print(a)
+    return refinedstatistics_crud.find_recommendations(db)
