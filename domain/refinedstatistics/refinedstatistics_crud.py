@@ -25,14 +25,44 @@ def is_refinedstatistic(db: Session, ticker: str, timestamp: str):
     return db.query(Refinedstatistics).filter(ticker == Refinedstatistics.ticker, Refinedstatistics.modified_at == datetime.fromtimestamp(int(
         timestamp) / 1000)).first()
 
-def find_recommendations(db: Session):
+def find_recommendations(db: Session, refined_per, refined_forward_per, refined_pbr, refined_roe):
     stmt = (select(Refinedstatistics)
             .select_from(Refinedstatistics)
-            .filter(Refinedstatistics.modified_at =='2024-04-08'
-                    , Refinedstatistics.refined_per <= -0.52
-                    ,Refinedstatistics.refined_forward_per <= -0.52
-                    , Refinedstatistics.refined_pbr <= -0.52
-                    , Refinedstatistics.refined_roe >= 0.52
+            .filter(Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d")
+                    , Refinedstatistics.refined_per <= refined_per
+                    , Refinedstatistics.refined_forward_per <= refined_forward_per
+                    , Refinedstatistics.refined_pbr <= refined_pbr
+                    , Refinedstatistics.refined_roe >= refined_roe
                     , Refinedstatistics.current_ratio >= 2.0
                     , Refinedstatistics.quick_ratio >= 1.0))
     return db.execute(stmt).scalars().all()
+
+def get_refinedstatistic_per(db: Session):
+    stmt = select(Refinedstatistics.refined_per).select_from(Refinedstatistics).filter(
+        Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def get_refinedstatistic_fwdper(db: Session):
+    stmt = select(Refinedstatistics.refined_forward_per).select_from(Refinedstatistics).filter(
+        Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def get_refinedstatistic_pbr(db: Session):
+    stmt = select(Refinedstatistics.refined_pbr).select_from(Refinedstatistics).filter(
+        Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def get_refinedstatistic_roe(db: Session):
+    stmt = select(Refinedstatistics.refined_roe).select_from(Refinedstatistics).filter(
+        Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def get_refinedstatistic_current(db: Session):
+    stmt = select(Refinedstatistics.current_ratio).select_from(Refinedstatistics).filter(
+        Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def get_refinedstatistic_quick(db: Session):
+    stmt = select(Refinedstatistics.quick_ratio).select_from(Refinedstatistics).filter(
+        Refinedstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]

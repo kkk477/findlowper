@@ -112,7 +112,7 @@ def get_recommendations(db: Session = Depends(get_db)):
 
     for ticker in tickers:
         ticker_yf = yf.Ticker(ticker.ticker)
-        ticker_yf.history(period='max')
+        ticker_yf.history(period='99y')
         info = ticker_yf.info
         per = info.get('trailingPE')
         fwd_per = info.get('forwardPE')
@@ -121,22 +121,22 @@ def get_recommendations(db: Session = Depends(get_db)):
         current_ratio = info.get('currentRatio')
         quick_ratio = info.get('quickRatio')
 
-        if per == 'Infinity':
+        if per == 'Infinity' or per is None or float(per) <= 0:
             continue
 
-        if fwd_per == 'Infinity':
+        if fwd_per == 'Infinity' or fwd_per is None or float(fwd_per) <= 0:
             continue
 
-        if pbr == 'Infinity':
+        if pbr == 'Infinity' or pbr is None or float(pbr) <= 0:
             continue
 
-        if roe == 'Infinity':
+        if roe == 'Infinity' or roe is None or float(roe) <= 0:
             continue
 
-        if current_ratio == 'Infinity':
+        if current_ratio == 'Infinity' or current_ratio is None or float(current_ratio) <= 0:
             continue
 
-        if quick_ratio == 'Infinity':
+        if quick_ratio == 'Infinity' or quick_ratio is None or float(quick_ratio) <= 0:
             continue
 
         if not rawstatistics_crud.is_rawstatistic(db, ticker.ticker):
@@ -146,12 +146,10 @@ def get_recommendations(db: Session = Depends(get_db)):
 
 @app.get("/recommendations/{ticker}")
 def get_recommendations(ticker: str, db: Session = Depends(get_db)):
-    yf.pdr_override()
-    ticker_yf = yf.Ticker(ticker)
-    info = ticker_yf.info
-    # trailingEps = info.get('trailingEps')
-    # per = info.get('currentPrice')/trailingEps
-    return info
+    rawstatistic_per = rawstatistics_crud.get_rawstatistic_per(db)
+    per_mean = pd.Series(rawstatistic_per).mean(axis=0)
+    per_std = pd.Series(rawstatistic_per).std(axis=0)
+    return per_std
 
 @app.get("/do/refine")
 def do_refine(db: Session = Depends(get_db)):
@@ -163,38 +161,44 @@ def do_refine(db: Session = Depends(get_db)):
     rawstatistic_current = rawstatistics_crud.get_rawstatistic_current(db)
     rawstatistic_quick = rawstatistics_crud.get_rawstatistic_quick(db)
 
-    per_mean = pd.Series(rawstatistic_per).mean(axis=0)
-    per_std = pd.Series(rawstatistic_per).std(axis=0)
-    fwdper_mean = pd.Series(rawstatistic_fwdper).mean(axis=0)
-    fwdper_std = pd.Series(rawstatistic_fwdper).std(axis=0)
+    per_max = pd.Series(rawstatistic_per).max()
+    per_min = pd.Series(rawstatistic_per).min()
+    fwdper_max = pd.Series(rawstatistic_fwdper).max()
+    fwdper_min = pd.Series(rawstatistic_fwdper).min()
 
-    pbr_mean = pd.Series(rawstatistic_pbr).mean(axis=0)
-    pbr_std = pd.Series(rawstatistic_pbr).std(axis=0)
+    pbr_max = pd.Series(rawstatistic_pbr).max()
+    pbr_min = pd.Series(rawstatistic_pbr).min()
 
-    roe_mean = pd.Series(rawstatistic_roe).mean(axis=0)
-    roe_std = pd.Series(rawstatistic_roe).std(axis=0)
+    roe_max = pd.Series(rawstatistic_roe).max()
+    roe_min = pd.Series(rawstatistic_roe).min()
 
-    current_mean = pd.Series(rawstatistic_current).mean(axis=0)
-    current_std = pd.Series(rawstatistic_current).std(axis=0)
+    current_max = pd.Series(rawstatistic_current).max()
+    current_min = pd.Series(rawstatistic_current).min()
 
-    quick_mean = pd.Series(rawstatistic_quick).mean(axis=0)
-    quick_std = pd.Series(rawstatistic_quick).std(axis=0)
+    quick_max = pd.Series(rawstatistic_quick).max()
+    quick_min = pd.Series(rawstatistic_quick).min()
 
     for rowdata in rowdatas:
-        normalized_per = (float(rowdata.per) - per_mean)/per_std
-        normalized_fwdper = (float(rowdata.forward_per) - fwdper_mean) / fwdper_std
-        normalized_pbr = (float(rowdata.pbr) - pbr_mean) / pbr_std
-        normalized_roe = (float(rowdata.roe) - roe_mean) / roe_std
-        normalized_current = (float(rowdata.current_ratio) - current_mean) / current_std
-        normalized_quick = (float(rowdata.quick_ratio) - quick_mean) / quick_std
+        normalized_per = (float(rowdata.per) - per_min) / (per_max - per_min)
+        normalized_fwdper = (float(rowdata.forward_per) - fwdper_min) / (fwdper_max - fwdper_min)
+        normalized_pbr = (float(rowdata.pbr) - pbr_min) / (pbr_max - pbr_min)
+        normalized_roe = (float(rowdata.roe) - roe_min) / (roe_max - roe_min)
+        normalized_current = (float(rowdata.current_ratio) - current_min) / (current_max - current_min)
+        normalized_quick = (float(rowdata.quick_ratio) - quick_min) / (quick_max - quick_min)
         refinedstatistics_crud.create_refinedstatistic(db, rowdata.ticker, normalized_per,
                                                        normalized_fwdper,
                                                        normalized_pbr, normalized_roe, rowdata.current_ratio, rowdata.quick_ratio)
 
-    return per_mean
+    return 'ㅁ'
 
 @app.get("/do/join")
 def do_join(db: Session = Depends(get_db)):
-    a=len(refinedstatistics_crud.find_recommendations(db))
+    refinedstatistic_per = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_per(db)).quantile(0.3)
+    refinedstatistic_fwdper = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_fwdper(db)).quantile(0.3)
+    refinedstatistic_pbr = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_pbr(db)).quantile(0.3)
+    refinedstatistic_roe = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_roe(db)).quantile(0.7)
+
+    a=len(refinedstatistics_crud.find_recommendations(db, refinedstatistic_per.get(0), refinedstatistic_fwdper.get(0),
+                                                      refinedstatistic_pbr.get(0), refinedstatistic_roe.get(0)))
     print(a)
-    return refinedstatistics_crud.find_recommendations(db)
+    return refinedstatistics_crud.find_recommendations(db, refinedstatistic_per.get(0), refinedstatistic_fwdper.get(0), refinedstatistic_pbr.get(0), refinedstatistic_roe.get(0))

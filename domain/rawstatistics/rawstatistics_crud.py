@@ -24,41 +24,42 @@ def get_rawstatistic(db: Session, ticker: str):
     return [float(ele) for ele in db.query(Rawstatistics).order_by(Rawstatistics.modified_at.desc()).filter(Rawstatistics.ticker == ticker).all()]
 
 def get_all_rawstatistic(db: Session):
-    return db.query(Rawstatistics).order_by(Rawstatistics.modified_at.desc()).filter(Rawstatistics.modified_at == '2024-04-04').all()
+    return db.query(Rawstatistics).order_by(Rawstatistics.modified_at.desc()).filter(Rawstatistics.modified_at ==
+                                                                                     datetime.today().strftime("%Y-%m-%d")).all()
 
 def get_rawstatistic_per(db: Session):
     stmt = select(Rawstatistics.per).select_from(Rawstatistics).filter(
-        Rawstatistics.modified_at == '2024-04-04')
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
 
 def get_rawstatistic_fwdper(db: Session):
     stmt = select(Rawstatistics.forward_per).select_from(Rawstatistics).filter(
-        Rawstatistics.modified_at == '2024-04-04')
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
 
 def get_rawstatistic_pbr(db: Session):
     stmt = select(Rawstatistics.pbr).select_from(Rawstatistics).filter(
-        Rawstatistics.modified_at == '2024-04-04')
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
 
 def get_rawstatistic_roe(db: Session):
     stmt = select(Rawstatistics.roe).select_from(Rawstatistics).filter(
-        Rawstatistics.modified_at == '2024-04-04')
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
 
 def get_rawstatistic_current(db: Session):
     stmt = select(Rawstatistics.current_ratio).select_from(Rawstatistics).filter(
-        Rawstatistics.modified_at == '2024-04-04')
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
 
 def get_rawstatistic_quick(db: Session):
     stmt = select(Rawstatistics.quick_ratio).select_from(Rawstatistics).filter(
-        Rawstatistics.modified_at == '2024-04-04')
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
 
 def is_rawstatistic(db: Session, ticker: str):
     result = db.query(Rawstatistics).filter(ticker == Rawstatistics.ticker, Rawstatistics.modified_at ==
-                                   datetime.today()).count()
+                                   datetime.today().strftime("%Y-%m-%d")).count()
     if result > 0:
         print('true')
         return True
