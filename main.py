@@ -30,6 +30,7 @@ def get_tickers(db: Session = Depends(get_db)):
         nasdaq = fdr.StockListing('NASDAQ')
         df = pd.concat([nasdaq])
         num_of_rows = len(df['Symbol'])
+        tickers_crud.delete_tickers(db)
 
         for i in range(0, num_of_rows):
             ticker = df['Symbol'][i]
@@ -120,6 +121,7 @@ def get_recommendations(db: Session = Depends(get_db)):
         roe = info.get('returnOnEquity')
         current_ratio = info.get('currentRatio')
         quick_ratio = info.get('quickRatio')
+        averageVolume10days = info.get('averageVolume10days')
 
         if per == 'Infinity' or per is None or float(per) <= 0:
             continue
@@ -139,8 +141,12 @@ def get_recommendations(db: Session = Depends(get_db)):
         if quick_ratio == 'Infinity' or quick_ratio is None or float(quick_ratio) <= 0:
             continue
 
+        if quick_ratio == 'averageVolume10days' or averageVolume10days is None or float(averageVolume10days) <= 0:
+            continue
+
         if not rawstatistics_crud.is_rawstatistic(db, ticker.ticker):
-            rawstatistics_crud.create_rawstatistics(db, ticker.ticker, per, fwd_per, pbr, roe, current_ratio, quick_ratio)
+            rawstatistics_crud.create_rawstatistics(db, ticker.ticker, per, fwd_per, pbr, roe, current_ratio,
+                                                    quick_ratio, averageVolume10days)
 
     return 'a'
 
@@ -154,6 +160,26 @@ def get_recommendations(ticker: str, db: Session = Depends(get_db)):
 @app.get("/do/refine")
 def do_refine(db: Session = Depends(get_db)):
     rowdatas = rawstatistics_crud.get_all_rawstatistic(db)
+    averageVolume10days = rawstatistics_crud.get_averageVolume10days(db)
+
+    averageVolume10days_max = pd.Series(averageVolume10days).max()
+    averageVolume10days_min = pd.Series(averageVolume10days).min()
+
+    averageVolume_list = []
+    for volume in averageVolume10days:
+        averageVolume_list.append((float(volume) - averageVolume10days_min) / (averageVolume10days_max -
+                                                                               averageVolume10days_min))
+
+    averageVolume_cut = pd.DataFrame(averageVolume_list).quantile(0.3).get(0)
+
+    for rowdata in rowdatas:
+        normalized_volume = (float(rowdata.averageVolume10days) - averageVolume10days_min) / (
+                    averageVolume10days_max - averageVolume10days_min)
+        if normalized_volume < averageVolume_cut:
+            rawstatistics_crud.delete_rawstatistic(db, rowdata.ticker)
+
+    rowdatas = rawstatistics_crud.get_all_rawstatistic(db)
+
     rawstatistic_per = rawstatistics_crud.get_rawstatistic_per(db)
     rawstatistic_fwdper = rawstatistics_crud.get_rawstatistic_fwdper(db)
     rawstatistic_pbr = rawstatistics_crud.get_rawstatistic_pbr(db)
@@ -183,22 +209,21 @@ def do_refine(db: Session = Depends(get_db)):
         normalized_fwdper = (float(rowdata.forward_per) - fwdper_min) / (fwdper_max - fwdper_min)
         normalized_pbr = (float(rowdata.pbr) - pbr_min) / (pbr_max - pbr_min)
         normalized_roe = (float(rowdata.roe) - roe_min) / (roe_max - roe_min)
+        normalized_volume = (float(rowdata.averageVolume10days) - averageVolume10days_min) / (averageVolume10days_max - averageVolume10days_min)
         normalized_current = (float(rowdata.current_ratio) - current_min) / (current_max - current_min)
         normalized_quick = (float(rowdata.quick_ratio) - quick_min) / (quick_max - quick_min)
         refinedstatistics_crud.create_refinedstatistic(db, rowdata.ticker, normalized_per,
                                                        normalized_fwdper,
-                                                       normalized_pbr, normalized_roe, rowdata.current_ratio, rowdata.quick_ratio)
+                                                       normalized_pbr, normalized_roe, rowdata.current_ratio,
+                                                       rowdata.quick_ratio, normalized_volume)
 
     return 'ㅁ'
 
 @app.get("/do/join")
 def do_join(db: Session = Depends(get_db)):
-    refinedstatistic_per = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_per(db)).quantile(0.3)
-    refinedstatistic_fwdper = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_fwdper(db)).quantile(0.3)
-    refinedstatistic_pbr = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_pbr(db)).quantile(0.3)
-    refinedstatistic_roe = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_roe(db)).quantile(0.7)
+    refinedstatistic_per = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_per(db)).quantile(0.3).get(0)
+    refinedstatistic_fwdper = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_fwdper(db)).quantile(0.3).get(0)
+    refinedstatistic_pbr = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_pbr(db)).quantile(0.3).get(0)
+    refinedstatistic_roe = pd.DataFrame(refinedstatistics_crud.get_refinedstatistic_roe(db)).quantile(0.7).get(0)
 
-    a=len(refinedstatistics_crud.find_recommendations(db, refinedstatistic_per.get(0), refinedstatistic_fwdper.get(0),
-                                                      refinedstatistic_pbr.get(0), refinedstatistic_roe.get(0)))
-    print(a)
-    return refinedstatistics_crud.find_recommendations(db, refinedstatistic_per.get(0), refinedstatistic_fwdper.get(0), refinedstatistic_pbr.get(0), refinedstatistic_roe.get(0))
+    return refinedstatistics_crud.find_recommendations(db, refinedstatistic_per, refinedstatistic_fwdper, refinedstatistic_pbr, refinedstatistic_roe)

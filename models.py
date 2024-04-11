@@ -217,6 +217,7 @@ class Rawstatistics(Base):
     roe = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     current_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     quick_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    averageVolume10days = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
 
 class Refinedstatistics(Base):
     __tablename__ = 'refinedstatistics'
@@ -232,6 +233,7 @@ class Refinedstatistics(Base):
 
     current_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     quick_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    averageVolume10days = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
 
 class Recommandationtickers(Base):
     __tablename__ = 'recommandationtickers'
@@ -247,3 +249,4 @@ class Recommandationtickers(Base):
 
     current_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
     quick_ratio = Column(Numeric(precision=30, scale=10), default=0, nullable=False)
+    averageVolume10days = Column(Numeric(precision=30, scale=10), default=0, nullable=False)

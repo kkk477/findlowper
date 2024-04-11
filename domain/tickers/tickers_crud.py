@@ -21,4 +21,7 @@ def is_tickers(db: Session, ticker: str, timestamp: str):
         timestamp) / 1000)).first()
 
 def get_tickers(db: Session):
-    return db.query(Tickers)
+    return db.query(Tickers).all()
+
+def delete_tickers(db: Session):
+    db.query(Tickers).delete()

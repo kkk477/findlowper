@@ -4,7 +4,7 @@ from models import Refinedstatistics
 from sqlalchemy import select
 
 def create_refinedstatistic(db: Session, ticker: str, per: str, fwd_per: str, pbr: str, roe: str, current_ratio: str,
-                            quick_ratio: str):
+                            quick_ratio: str, averageVolume10days: str):
     db_refinedstatistic = Refinedstatistics(
         ticker=ticker,
         modified_at=datetime.today(),
@@ -13,7 +13,8 @@ def create_refinedstatistic(db: Session, ticker: str, per: str, fwd_per: str, pb
         refined_pbr=pbr,
         refined_roe=roe,
         current_ratio=current_ratio,
-        quick_ratio=quick_ratio)
+        quick_ratio=quick_ratio,
+        averageVolume10days=averageVolume10days)
 
     db.add(db_refinedstatistic)
     db.commit()

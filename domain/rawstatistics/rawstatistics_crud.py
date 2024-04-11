@@ -5,7 +5,7 @@ from models import Rawstatistics
 from sqlalchemy import select
 
 def create_rawstatistics(db: Session, ticker: str, per: str, fwd_per: str, pbr: str, roe: str, current_ratio: str,
-                         quick_ratio: str):
+                         quick_ratio: str, averageVolume10days: str):
     db_rawstatistics = Rawstatistics(
         ticker=ticker,
         modified_at=datetime.today(),
@@ -14,14 +14,17 @@ def create_rawstatistics(db: Session, ticker: str, per: str, fwd_per: str, pbr: 
         pbr=pbr,
         roe=roe,
         current_ratio=current_ratio,
-        quick_ratio=quick_ratio)
+        quick_ratio=quick_ratio,
+        averageVolume10days=averageVolume10days)
 
     db.add(db_rawstatistics)
     db.commit()
     print(ticker)
 
 def get_rawstatistic(db: Session, ticker: str):
-    return [float(ele) for ele in db.query(Rawstatistics).order_by(Rawstatistics.modified_at.desc()).filter(Rawstatistics.ticker == ticker).all()]
+    return db.query(Rawstatistics).order_by(Rawstatistics.modified_at.desc()).filter(Rawstatistics.ticker == ticker,
+                                                                                     Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d")
+                                                                                     ).first()
 
 def get_all_rawstatistic(db: Session):
     return db.query(Rawstatistics).order_by(Rawstatistics.modified_at.desc()).filter(Rawstatistics.modified_at ==
@@ -56,6 +59,14 @@ def get_rawstatistic_quick(db: Session):
     stmt = select(Rawstatistics.quick_ratio).select_from(Rawstatistics).filter(
         Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
     return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def get_averageVolume10days(db: Session):
+    stmt = select(Rawstatistics.averageVolume10days).select_from(Rawstatistics).filter(
+        Rawstatistics.modified_at == datetime.today().strftime("%Y-%m-%d"))
+    return [float(ele) for ele in db.execute(stmt).scalars().all()]
+
+def delete_rawstatistic(db: Session, ticker: str):
+    db.query(Rawstatistics).filter(Rawstatistics.ticker == ticker).delete()
 
 def is_rawstatistic(db: Session, ticker: str):
     result = db.query(Rawstatistics).filter(ticker == Rawstatistics.ticker, Rawstatistics.modified_at ==
